@@ -1,0 +1,19 @@
+name: 'summit_2026_hands_on_lab_casino'
+version: '1.0.0'
+config-version: 2
+
+profile: 'summit_2026_hands_on_lab_casino'
+
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+models:
+  summit_2026_hands_on_lab_casino:
