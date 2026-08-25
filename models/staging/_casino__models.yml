@@ -1,0 +1,106 @@
+version: 2
+
+models:
+  - name: stg_casino__players
+    description: >
+      Current, non-deleted player records from the casino connector. One row per
+      player.
+    columns:
+      - name: player_id
+        description: Primary key for a player.
+        data_tests:
+          - unique
+          - not_null
+      - name: email
+        description: Player email normalized to lowercase and trimmed.
+      - name: signup_at
+        description: Timestamp when the player signed up.
+      - name: preferred_game_type
+        description: Player's stated preferred casino game.
+      - name: vip_tier
+        description: VIP tier recorded on the player profile.
+      - name: source_synced_at
+        description: Timestamp when Fivetran last synced the source row.
+
+  - name: stg_casino__loyalty_accounts
+    description: >
+      Current, non-deleted loyalty accounts. A player can have multiple accounts;
+      the model grain is one row per loyalty account.
+    columns:
+      - name: loyalty_id
+        description: Primary key for a loyalty account.
+        data_tests:
+          - unique
+          - not_null
+      - name: player_id
+        description: Player who owns the loyalty account.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_casino__players')
+                field: player_id
+      - name: loyalty_tier
+        description: Tier assigned to this loyalty account.
+      - name: points_balance
+        description: Current points balance for this account.
+      - name: lifetime_points
+        description: Lifetime points recorded for this account.
+      - name: enrolled_at
+        description: Timestamp when the loyalty account was enrolled.
+
+  - name: stg_casino__gaming_sessions
+    description: >
+      Current, non-deleted casino gaming sessions. Each session belongs to one
+      player and uses either a game table or a slot machine.
+    columns:
+      - name: session_id
+        description: Primary key for a gaming session.
+        data_tests:
+          - unique
+          - not_null
+      - name: player_id
+        description: Player associated with the session.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_casino__players')
+                field: player_id
+      - name: table_id
+        description: Game table used for a table-game session; null for slots.
+      - name: machine_id
+        description: Slot machine used for a slot session; null for table games.
+      - name: started_at
+        description: Timestamp when the session began.
+      - name: ended_at
+        description: Timestamp when the session ended.
+      - name: currency_code
+        description: Currency of the session-level buy-in and cash-out amounts.
+
+  - name: stg_casino__wagers
+    description: >
+      Current, non-deleted wagers. Monetary values retain the currency recorded
+      on each wager.
+    columns:
+      - name: wager_id
+        description: Primary key for a wager.
+        data_tests:
+          - unique
+          - not_null
+      - name: session_id
+        description: Gaming session in which the wager occurred.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_casino__gaming_sessions')
+                field: session_id
+      - name: wager_at
+        description: Timestamp when the wager was placed.
+      - name: wager_amount
+        description: Amount wagered in wager_currency_code.
+      - name: payout_amount
+        description: Amount paid out in wager_currency_code.
+      - name: currency_code
+        description: Currency of the wager and payout amounts.

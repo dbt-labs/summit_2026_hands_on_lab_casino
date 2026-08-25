@@ -2,7 +2,7 @@ name: 'summit_2026_hands_on_lab_casino'
 version: '1.0.0'
 config-version: 2
 
-profile: 'summit_2026_hands_on_lab_casino'
+profile: 'dbt_summit_hands_on_lab_profile'
 
 model-paths: ["models"]
 analysis-paths: ["analyses"]
@@ -17,3 +17,7 @@ clean-targets:
 
 models:
   summit_2026_hands_on_lab_casino:
+    staging:
+      +materialized: view
+    marts:
+      +materialized: table

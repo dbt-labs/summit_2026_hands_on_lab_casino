@@ -2,7 +2,7 @@ version: 2
 
 sources:
   - name: casino_gaming_resort
-    database: jack_lowery
+    database: summit_hol_2026
     schema: casino_summit_test
     description: >
       Synthetic casino & gaming resort data from the summit_2026_connector_sdk
