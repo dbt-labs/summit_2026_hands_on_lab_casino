@@ -1,4 +1,4 @@
-name: 'summit_2026_hands_on_lab_casino'
+name: 'summit_2026_hands_on_lab'
 version: '1.0.0'
 config-version: 2
 
@@ -16,7 +16,7 @@ clean-targets:
   - "dbt_packages"
 
 models:
-  summit_2026_hands_on_lab_casino:
+  summit_2026_hands_on_lab:
     staging:
       +materialized: view
     intermediate:
