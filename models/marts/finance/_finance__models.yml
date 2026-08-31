@@ -1,0 +1,20 @@
+version: 2
+
+models:
+  - name: mart_monetization
+    description: >
+      "What's driving revenue by what we sell?" One row per title x purchase
+      category (premium_base, or the SKU category for IAP/season-pass/DLC
+      purchases) x month: gross/net/studio-net revenue, refund gross,
+      attach rate, first-purchase conversion, and refund rate.
+    columns:
+      - name: title_id
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_titles')
+                field: title_id
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [title_id, purchase_category, month]

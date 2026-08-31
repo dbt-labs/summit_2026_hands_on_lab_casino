@@ -1,0 +1,34 @@
+version: 2
+
+models:
+  - name: mart_player_leaderboard
+    description: >
+      "Where do players rank, and who's cheating?" One row per player x
+      leaderboard: best legitimate score, rank/percentile within the
+      leaderboard, rank within the title, and a separate flagged_submissions
+      count (cheaters are excluded from ranking, not deleted from the mart).
+    columns:
+      - name: player_id
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_players')
+                field: player_id
+
+  - name: mart_player_retention
+    description: >
+      "Which cohorts churn?" One row per registration_cohort_month x
+      acquisition_channel x week_offset (0-8), full spine with cohort_size
+      on every row. Title is deliberately excluded as a slice -- denominators
+      get too small. is_observable flags week offsets that haven't fully
+      elapsed yet for a given cohort.
+    columns:
+      - name: acquisition_channel
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['organic', 'paid_social', 'influencer', 'store_featured', 'cross_promo']
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [cohort_month, acquisition_channel, week_offset]

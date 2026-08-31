@@ -1,0 +1,12 @@
+version: 2
+
+models:
+  - name: mart_live_ops_health
+    description: >
+      "Did this release help or hurt?" One row per release, extending
+      fct_releases with matched-window net revenue per active player and a
+      combined regressed_release flag (engagement worse, or crash rate/dev
+      overrun past threshold).
+    columns:
+      - name: release_id
+        data_tests: [unique, not_null]

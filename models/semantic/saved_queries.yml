@@ -1,0 +1,22 @@
+version: 2
+
+saved_queries:
+  - name: monthly_studio_performance
+    description: Studio-wide net revenue, MAP, and payer conversion by month.
+    query_params:
+      metrics:
+        - net_revenue
+        - monthly_active_players
+        - payer_conversion_rate
+      group_by:
+        - "metric_time__month"
+
+  - name: revenue_by_title_month
+    description: Net revenue and ARPPU by title and month.
+    query_params:
+      metrics:
+        - net_revenue
+        - arppu
+      group_by:
+        - "metric_time__month"
+        - "title__title_id"

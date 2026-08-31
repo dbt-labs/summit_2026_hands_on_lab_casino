@@ -19,5 +19,33 @@ models:
   summit_2026_hands_on_lab_casino:
     staging:
       +materialized: view
+    intermediate:
+      +materialized: ephemeral
     marts:
       +materialized: table
+
+vars:
+  # 12-month history window (mirrors the connector's ACTIVITY_WINDOW).
+  window_start_date: '2025-08-01'
+  date_spine_end_date: '2026-08-05'
+  analysis_as_of_date: '2026-08-05'
+
+  # A player is considered churned once this many days have passed since
+  # their last play session (behavioral -- independent of the source's own
+  # account_status flag).
+  churn_days_threshold: 60
+
+  # Live-service (IAP + season pass) lifetime net spend thresholds driving
+  # dim_players.payer_segment / int_player_spend.payer_segment.
+  payer_segment_whale_threshold_usd: 150
+  payer_segment_dolphin_threshold_usd: 50
+  payer_segment_minnow_threshold_usd: 5
+
+  # A title needs at least this many active players in the trailing 90 days
+  # to be considered "mature" rather than "declining" in dim_titles.
+  mature_active_players_threshold: 5
+
+  # Minimum monthly-active-players / cohort size for a mart_title_performance
+  # or mart_player_retention row to be flagged has_sufficient_volume.
+  mart_min_monthly_active_players: 5
+  mart_min_cohort_size: 5

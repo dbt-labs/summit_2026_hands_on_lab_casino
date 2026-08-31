@@ -1,0 +1,255 @@
+version: 2
+
+models:
+  - name: dim_players
+    description: Conformed player dimension -- one row per player, with lifetime activity and spend rolled up.
+    columns:
+      - name: player_id
+        data_tests: [unique, not_null]
+      - name: acquisition_channel
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['organic', 'paid_social', 'influencer', 'store_featured', 'cross_promo']
+      - name: account_status
+        description: Source-reported status. Can diverge from is_churned, which is computed from actual session activity.
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['active', 'dormant', 'churned', 'banned']
+      - name: payer_segment
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['whale', 'dolphin', 'minnow', 'non_payer']
+      - name: favorite_title_id
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_titles')
+                field: title_id
+
+  - name: dim_titles
+    description: Conformed title dimension -- one row per game, with rolled-up activity and a derived lifecycle_stage.
+    columns:
+      - name: title_id
+        data_tests: [unique, not_null]
+      - name: monetization_model
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['premium', 'f2p', 'premium_plus_dlc']
+      - name: lifecycle_stage
+        description: >
+          Derived stage: launch_window (<=90 days old) -> sunset_candidate
+          (quiet 60+ days and >365 days old) -> growth (<=365 days old) ->
+          mature (active_players_last_90d over threshold) -> declining.
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['launch_window', 'sunset_candidate', 'growth', 'mature', 'declining']
+
+  - name: dim_platforms
+    description: Conformed platform (storefront) dimension.
+    columns:
+      - name: platform_id
+        data_tests: [unique, not_null]
+      - name: platform_family
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['pc', 'console', 'mobile']
+
+  - name: dim_skus
+    description: Conformed SKU dimension.
+    columns:
+      - name: sku_id
+        data_tests: [unique, not_null]
+      - name: title_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_titles')
+                field: title_id
+
+  - name: dim_dates
+    description: Date spine covering the studio's history window, one row per calendar day.
+    columns:
+      - name: date_day
+        data_tests: [unique, not_null]
+
+  - name: fct_play_sessions
+    description: One row per play session.
+    columns:
+      - name: session_id
+        data_tests: [unique, not_null]
+      - name: player_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_players')
+                field: player_id
+      - name: title_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_titles')
+                field: title_id
+
+  - name: fct_transactions
+    description: One row per transaction.
+    columns:
+      - name: transaction_id
+        data_tests: [unique, not_null]
+      - name: player_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_players')
+                field: player_id
+      - name: title_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_titles')
+                field: title_id
+      - name: transaction_type
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['premium_purchase', 'iap', 'season_pass', 'dlc', 'refund', 'chargeback']
+
+  - name: fct_high_scores
+    description: One row per leaderboard submission, ranked/percentiled excluding cheat-flagged rows.
+    columns:
+      - name: score_id
+        data_tests: [unique, not_null]
+      - name: player_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_players')
+                field: player_id
+      - name: title_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_titles')
+                field: title_id
+
+  - name: fct_releases
+    description: One row per patch/content drop, with a +-10 day before/after engagement comparison.
+    columns:
+      - name: release_id
+        data_tests: [unique, not_null]
+      - name: title_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_titles')
+                field: title_id
+      - name: release_type
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['major', 'minor', 'hotfix', 'content_drop', 'event']
+
+semantic_models:
+  - name: fct_play_sessions
+    model: "{{ ref('fct_play_sessions') }}"
+    defaults:
+      agg_time_dimension: session_start_at
+    entities:
+      - name: session
+        type: primary
+        expr: session_id
+      - name: player
+        type: foreign
+        expr: player_id
+      - name: title
+        type: foreign
+        expr: title_id
+    dimensions:
+      - name: session_start_at
+        type: time
+        type_params:
+          time_granularity: day
+    measures:
+      - name: session_count
+        agg: count
+        expr: session_id
+      - name: valid_session_count
+        agg: count
+        expr: session_id
+        agg_params:
+          where: is_valid_session
+      - name: play_minutes
+        agg: sum
+        expr: duration_minutes
+      - name: monthly_active_players
+        agg: count_distinct
+        expr: player_id
+      - name: cohort_players
+        agg: count_distinct
+        expr: "case when week_offset_from_registration = 0 then player_id end"
+      - name: week4_returned_players
+        agg: count_distinct
+        expr: "case when week_offset_from_registration = 4 then player_id end"
+
+  - name: fct_transactions
+    model: "{{ ref('fct_transactions') }}"
+    defaults:
+      agg_time_dimension: transaction_at
+    entities:
+      - name: transaction
+        type: primary
+        expr: transaction_id
+      - name: player
+        type: foreign
+        expr: player_id
+      - name: title
+        type: foreign
+        expr: title_id
+    dimensions:
+      - name: transaction_at
+        type: time
+        type_params:
+          time_granularity: day
+    measures:
+      - name: net_revenue
+        agg: sum
+        expr: net_amount_usd
+      - name: gross_revenue
+        agg: sum
+        expr: gross_amount_usd
+      - name: studio_net_revenue
+        agg: sum
+        expr: studio_net_revenue_usd
+      - name: paying_players
+        agg: count_distinct
+        expr: "case when is_live_service_revenue then player_id end"
+
+metrics:
+  - name: week_4_retention
+    description: Share of a registration cohort still playing in week 4.
+    type: ratio
+    label: Week 4 Retention
+    type_params:
+      numerator: week4_returned_players
+      denominator: cohort_players
+
+  - name: arppu
+    description: Average net revenue per paying player.
+    type: ratio
+    label: ARPPU
+    type_params:
+      numerator: net_revenue
+      denominator: paying_players
