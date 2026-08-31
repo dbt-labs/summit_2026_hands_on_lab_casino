@@ -1,7 +1,7 @@
 version: 2
 
 sources:
-  - name: level_up_labs
+  - name: casino_gaming_resort
     database: summit_hol_2026
     schema: casino_summit_test
     description: >
