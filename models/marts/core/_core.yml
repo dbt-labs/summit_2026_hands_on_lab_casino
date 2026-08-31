@@ -75,8 +75,11 @@ models:
 
   - name: dim_dates
     description: Date spine covering the studio's history window, one row per calendar day.
+    time_spine:
+      standard_granularity_column: date_day
     columns:
       - name: date_day
+        granularity: day
         data_tests: [unique, not_null]
 
   - name: fct_play_sessions
@@ -188,9 +191,7 @@ semantic_models:
         expr: session_id
       - name: valid_session_count
         agg: count
-        expr: session_id
-        agg_params:
-          where: is_valid_session
+        expr: "case when is_valid_session then session_id end"
       - name: play_minutes
         agg: sum
         expr: duration_minutes
@@ -238,6 +239,41 @@ semantic_models:
         expr: "case when is_live_service_revenue then player_id end"
 
 metrics:
+  # Ratio metric numerator/denominator reference other metrics, not measures
+  # directly -- these `simple` metrics just expose the underlying measure so
+  # the ratios below (and payer_conversion_rate in semantic/metrics.yml,
+  # which needs monthly_active_players and paying_players) have something to
+  # point at.
+  - name: cohort_players
+    type: simple
+    label: Cohort Players
+    type_params:
+      measure: cohort_players
+
+  - name: week4_returned_players
+    type: simple
+    label: Week 4 Returned Players
+    type_params:
+      measure: week4_returned_players
+
+  - name: monthly_active_players
+    type: simple
+    label: Monthly Active Players
+    type_params:
+      measure: monthly_active_players
+
+  - name: net_revenue
+    type: simple
+    label: Net Revenue
+    type_params:
+      measure: net_revenue
+
+  - name: paying_players
+    type: simple
+    label: Paying Players
+    type_params:
+      measure: paying_players
+
   - name: week_4_retention
     description: Share of a registration cohort still playing in week 4.
     type: ratio
