@@ -164,7 +164,7 @@ models:
 
 semantic_models:
   - name: fct_play_sessions
-    model: "{{ ref('fct_play_sessions') }}"
+    model: ref('fct_play_sessions')
     defaults:
       agg_time_dimension: session_start_at
     entities:
@@ -205,7 +205,7 @@ semantic_models:
         expr: "case when week_offset_from_registration = 4 then player_id end"
 
   - name: fct_transactions
-    model: "{{ ref('fct_transactions') }}"
+    model: ref('fct_transactions')
     defaults:
       agg_time_dimension: transaction_at
     entities:
