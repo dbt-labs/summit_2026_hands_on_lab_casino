@@ -1,0 +1,58 @@
+version: 2
+
+exposures:
+  - name: leadership_portfolio_review
+    label: Leadership Portfolio Review
+    type: dashboard
+    maturity: medium
+    description: Monthly studio KPIs and per-title performance for studio leadership.
+    depends_on:
+      - ref('mart_studio_kpis')
+      - ref('mart_title_performance')
+    owner:
+      name: Studio Leadership
+      email: leadership@levelup.example
+
+  - name: finance_revenue_book
+    label: Finance Revenue Book
+    type: dashboard
+    maturity: medium
+    description: Revenue by title, purchase category, and month for finance.
+    depends_on:
+      - ref('mart_monetization')
+    owner:
+      name: Finance
+      email: finance@levelup.example
+
+  - name: live_ops_release_scorecard
+    label: Live Ops Release Scorecard
+    type: dashboard
+    maturity: medium
+    description: Before/after engagement and crash-rate impact of every release.
+    depends_on:
+      - ref('mart_live_ops_health')
+    owner:
+      name: Live Ops
+      email: live-ops@levelup.example
+
+  - name: player_experience_retention
+    label: Player Experience -- Retention
+    type: dashboard
+    maturity: medium
+    description: Cohort retention by acquisition channel.
+    depends_on:
+      - ref('mart_player_retention')
+    owner:
+      name: Player Experience
+      email: player-experience@levelup.example
+
+  - name: player_experience_leaderboards
+    label: Player Experience -- Leaderboards
+    type: dashboard
+    maturity: low
+    description: Per-title leaderboard standings and cheating flags.
+    depends_on:
+      - ref('mart_player_leaderboard')
+    owner:
+      name: Player Experience
+      email: player-experience@levelup.example

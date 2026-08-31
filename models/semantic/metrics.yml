@@ -1,0 +1,10 @@
+version: 2
+
+metrics:
+  - name: payer_conversion_rate
+    description: Share of monthly active players who are paying (live-service) players in the same period.
+    type: ratio
+    label: Payer Conversion Rate
+    type_params:
+      numerator: paying_players
+      denominator: monthly_active_players

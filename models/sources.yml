@@ -5,46 +5,29 @@ sources:
     database: summit_hol_2026
     schema: casino_summit_test
     description: >
-      Synthetic casino & gaming resort data from the summit_2026_connector_sdk
-      Fivetran connector -- 20 joinable tables rooted at `properties`.
+      Synthetic Level Up Labs video game studio data from the
+      summit_2026_connector_sdk Fivetran connector -- 11 joinable tables
+      covering the studio's title/platform/SKU catalog and player activity.
     tables:
-      - name: properties
-        description: Casino resort properties -- the root entity every other table traces back to.
-      - name: departments
-        description: Operating divisions within a property (gaming ops, security, F&B, etc.).
-      - name: employees
-        description: Staff, linked to a department and property; self-referential via manager_employee_id.
-      - name: gaming_floors
-        description: Physical casino floors within a property.
-      - name: game_tables
-        description: Table games (blackjack, roulette, baccarat, etc.) on a gaming floor.
-      - name: slot_machines
-        description: Slot machines on a gaming floor.
+      - name: titles
+        description: The studio's portfolio of games -- the root entity every activity table traces back to.
+      - name: platforms
+        description: Storefronts a title can ship on (Steam, PlayStation, Xbox, Switch, iOS, Android).
+      - name: title_platforms
+        description: Bridge between titles and platforms, one row per title/platform release.
+      - name: skus
+        description: Purchasable items (cosmetics, currency packs, expansions, battle passes) per title.
+      - name: releases
+        description: Patch/content-drop history per title.
       - name: players
-        description: Patrons/guests.
-      - name: loyalty_accounts
-        description: Player loyalty program enrollment and point balances.
-      - name: cash_cages
-        description: Cashier cages within a property.
-      - name: hotel_rooms
-        description: Hotel rooms within a property.
-      - name: fb_outlets
-        description: Food & beverage outlets (restaurants, bars) within a property.
-      - name: shows
-        description: Entertainment shows/events within a property.
-      - name: gaming_sessions
-        description: A player's session at a game table or slot machine, staffed by an employee.
-      - name: wagers
-        description: Individual bets placed within a gaming session.
-      - name: chip_transactions
-        description: Cage transactions (buy-in, cash-out, marker draw/payment, chip exchange).
-      - name: comps
-        description: Complimentary offers (room, food, show, cash back, free play) issued to players.
-      - name: reservations
-        description: Hotel room reservations booked by players.
-      - name: fb_orders
-        description: Orders placed at food & beverage outlets.
-      - name: show_tickets
-        description: Tickets purchased/comped for shows.
-      - name: surveillance_incidents
-        description: Incidents logged on a gaming floor, optionally tied to a specific table or machine.
+        description: Player accounts.
+      - name: play_sessions
+        description: A player's session with a title on a given platform.
+      - name: transactions
+        description: Player purchases -- premium unit sales, IAP, season passes, DLC, refunds, chargebacks.
+      - name: high_scores
+        description: Leaderboard submissions.
+      - name: reviews
+        description: Player-submitted store reviews.
+      - name: marketing_spend
+        description: Weekly acquisition campaign spend and funnel metrics per title/channel.

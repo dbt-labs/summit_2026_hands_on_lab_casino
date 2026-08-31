@@ -1,0 +1,32 @@
+version: 2
+
+models:
+  - name: mart_studio_kpis
+    description: >
+      "How is the studio doing this month?" One row per month: MAP, sessions,
+      new registrations, net/studio-net revenue by stream, refunds, payer
+      conversion, ARPU, revenue concentration (top title/player share),
+      marketing spend/installs, blended CAC, and current portfolio health by
+      lifecycle_stage.
+    columns:
+      - name: month
+        data_tests: [unique, not_null]
+
+  - name: mart_title_performance
+    description: >
+      "Which titles deserve investment?" One row per title per month (spine
+      from launch month forward): MAP, sessions, ARPU/ARPPU, payer
+      conversion, average review rating, and month-over-month deltas.
+      has_sufficient_volume flags thin cells so small-denominator months
+      aren't over-read.
+    columns:
+      - name: title_id
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_titles')
+                field: title_id
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [title_id, month]

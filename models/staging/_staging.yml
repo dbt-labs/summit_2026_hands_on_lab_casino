@@ -1,0 +1,367 @@
+version: 2
+
+models:
+  # ------------------------------------------------------------------------------------
+  - name: stg_levelup__titles
+    description: Cleaned title dimension -- one row per game in the studio's portfolio.
+    columns:
+      - name: title_id
+        description: Title primary key.
+        data_tests:
+          - unique
+          - not_null
+      - name: title_name
+        description: Player-facing title name.
+        data_tests:
+          - not_null
+      - name: monetization_model
+        description: premium, f2p, or premium_plus_dlc.
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['premium', 'f2p', 'premium_plus_dlc']
+      - name: launch_date
+        description: Worldwide launch date.
+        data_tests:
+          - not_null
+      - name: is_live_service
+        description: Whether the title is operated as a live-service game.
+        data_tests:
+          - not_null
+
+  # ------------------------------------------------------------------------------------
+  - name: stg_levelup__platforms
+    description: Cleaned storefront reference -- one row per platform.
+    columns:
+      - name: platform_id
+        description: Storefront identifier (primary key).
+        data_tests:
+          - unique
+          - not_null
+      - name: platform_family
+        description: pc, console, or mobile.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['pc', 'console', 'mobile']
+      - name: storefront_fee_rate
+        description: Fraction of gross revenue retained by the storefront.
+        data_tests:
+          - not_null
+
+  # ------------------------------------------------------------------------------------
+  - name: stg_levelup__title_platforms
+    description: Cleaned title/platform release bridge.
+    columns:
+      - name: title_id
+        description: Foreign key to stg_levelup__titles.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_levelup__titles')
+                field: title_id
+      - name: platform_id
+        description: Foreign key to stg_levelup__platforms.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_levelup__platforms')
+                field: platform_id
+      - name: platform_launch_date
+        description: Per-platform launch date for this title.
+        data_tests:
+          - not_null
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [title_id, platform_id]
+
+  # ------------------------------------------------------------------------------------
+  - name: stg_levelup__skus
+    description: Cleaned SKU dimension -- one row per purchasable item.
+    columns:
+      - name: sku_id
+        description: SKU primary key.
+        data_tests:
+          - unique
+          - not_null
+      - name: title_id
+        description: Foreign key to stg_levelup__titles.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_levelup__titles')
+                field: title_id
+      - name: sku_category
+        description: cosmetic, currency_pack, expansion, or battle_pass.
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['cosmetic', 'currency_pack', 'expansion', 'battle_pass']
+      - name: price_usd
+        description: SKU list price in USD.
+        data_tests:
+          - not_null
+
+  # ------------------------------------------------------------------------------------
+  - name: stg_levelup__releases
+    description: Cleaned release history -- one row per patch/content drop.
+    columns:
+      - name: release_id
+        description: Release primary key.
+        data_tests:
+          - unique
+          - not_null
+      - name: title_id
+        description: Foreign key to stg_levelup__titles.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_levelup__titles')
+                field: title_id
+      - name: release_type
+        description: major, minor, hotfix, content_drop, or event.
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['major', 'minor', 'hotfix', 'content_drop', 'event']
+      - name: released_at
+        description: Release timestamp (UTC).
+        data_tests:
+          - not_null
+
+  # ------------------------------------------------------------------------------------
+  - name: stg_levelup__players
+    description: >
+      Cleaned player dimension. Country codes are trimmed/uppercased and the
+      acquisition channel is normalized to snake_case.
+    columns:
+      - name: player_id
+        description: Player primary key.
+        data_tests:
+          - unique
+          - not_null
+      - name: registered_at
+        description: Registration timestamp (UTC).
+        data_tests:
+          - not_null
+      - name: acquisition_channel
+        description: Normalized acquisition channel.
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['organic', 'paid_social', 'influencer', 'store_featured', 'cross_promo']
+      - name: account_status
+        description: active, dormant, churned, or banned.
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['active', 'dormant', 'churned', 'banned']
+
+  # ------------------------------------------------------------------------------------
+  - name: stg_levelup__play_sessions
+    description: >
+      Cleaned session events, deduplicated to one row per session_id. Country
+      codes cleaned. Null session_end_at (crash sessions) are left intact
+      here and handled as business logic downstream.
+    columns:
+      - name: session_id
+        description: Session primary key (unique after dedupe).
+        data_tests:
+          - unique
+          - not_null
+      - name: player_id
+        description: Foreign key to stg_levelup__players.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_levelup__players')
+                field: player_id
+      - name: title_id
+        description: Foreign key to stg_levelup__titles.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_levelup__titles')
+                field: title_id
+      - name: network_type
+        description: Network the session used.
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['wifi', 'cellular', 'ethernet']
+      - name: session_start_at
+        description: Session start (UTC).
+        data_tests:
+          - not_null
+
+  # ------------------------------------------------------------------------------------
+  - name: stg_levelup__transactions
+    description: >
+      Cleaned transactions. transaction_at is converted from America/New_York
+      to UTC; the raw local time is preserved as transaction_at_local.
+      Refund/chargeback amounts remain positive -- sign normalization happens
+      in int_transactions.
+    columns:
+      - name: transaction_id
+        description: Transaction primary key.
+        data_tests:
+          - unique
+          - not_null
+      - name: player_id
+        description: Foreign key to stg_levelup__players.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_levelup__players')
+                field: player_id
+      - name: title_id
+        description: Foreign key to stg_levelup__titles.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_levelup__titles')
+                field: title_id
+      - name: transaction_type
+        description: premium_purchase, iap, season_pass, dlc, refund, or chargeback.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['premium_purchase', 'iap', 'season_pass', 'dlc', 'refund', 'chargeback']
+      - name: gross_amount_usd
+        description: Gross amount in USD (positive).
+        data_tests:
+          - not_null
+
+  # ------------------------------------------------------------------------------------
+  - name: stg_levelup__high_scores
+    description: Cleaned leaderboard submissions.
+    columns:
+      - name: score_id
+        description: Submission primary key.
+        data_tests: [unique, not_null]
+      - name: player_id
+        description: Foreign key to stg_levelup__players.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_levelup__players')
+                field: player_id
+      - name: title_id
+        description: Foreign key to stg_levelup__titles.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_levelup__titles')
+                field: title_id
+
+  # ------------------------------------------------------------------------------------
+  - name: stg_levelup__reviews
+    description: Cleaned store reviews.
+    columns:
+      - name: review_id
+        description: Review primary key.
+        data_tests: [unique, not_null]
+      - name: player_id
+        description: Foreign key to stg_levelup__players.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_levelup__players')
+                field: player_id
+      - name: title_id
+        description: Foreign key to stg_levelup__titles.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_levelup__titles')
+                field: title_id
+      - name: rating
+        description: Star rating, 1-5.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3, 4, 5]
+                quote: false
+
+  # ------------------------------------------------------------------------------------
+  - name: stg_levelup__marketing_spend
+    description: Cleaned weekly marketing spend and acquisition funnel.
+    columns:
+      - name: campaign_id
+        description: Campaign identifier (not unique -- one row per campaign-week).
+        data_tests: [not_null]
+      - name: title_id
+        description: Foreign key to stg_levelup__titles.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_levelup__titles')
+                field: title_id
+      - name: channel
+        description: Paid acquisition channel.
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['paid_social', 'influencer', 'store_featured', 'cross_promo']
+      - name: week_start_date
+        description: Week the spend was recorded.
+        data_tests: [not_null]
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [campaign_id, week_start_date]
+
+unit_tests:
+  - name: test_stg_levelup__players_cleans_dirty_inputs
+    description: >
+      country_code is trimmed/uppercased with empty strings turned to null;
+      acquisition_channel collapses "Paid Social" and "paid_social" into the
+      same normalized value; a blank acquisition_campaign_id becomes null
+      instead of an empty string.
+    model: stg_levelup__players
+    given:
+      - input: source('level_up_labs', 'players')
+        rows:
+          - {player_id: 1, country_code: " us ", acquisition_channel: "Paid Social", acquisition_campaign_id: " CMP001 ", registered_at: "2026-01-01 00:00:00", platform_registered_on: steam, birth_year: 1990, email: " Test@Example.com ", marketing_opt_in: true,  account_status: active,  last_login_at: "2026-01-02 00:00:00", _fivetran_synced: "2026-01-02 00:00:00"}
+          - {player_id: 2, country_code: "",     acquisition_channel: "paid_social",  acquisition_campaign_id: "",             registered_at: "2026-01-01 00:00:00", platform_registered_on: steam, birth_year: 1991, email: "a@b.com",              marketing_opt_in: false, account_status: dormant, last_login_at: "2026-01-02 00:00:00", _fivetran_synced: "2026-01-02 00:00:00"}
+          - {player_id: 3, country_code: "De",   acquisition_channel: "organic",      acquisition_campaign_id: null,           registered_at: "2026-01-01 00:00:00", platform_registered_on: steam, birth_year: 1992, email: "c@d.com",              marketing_opt_in: true,  account_status: active,  last_login_at: "2026-01-02 00:00:00", _fivetran_synced: "2026-01-02 00:00:00"}
+    expect:
+      rows:
+        - {player_id: 1, country_code: US,   acquisition_channel: paid_social, acquisition_campaign_id: CMP001, email: "test@example.com"}
+        - {player_id: 2, country_code: null, acquisition_channel: paid_social, acquisition_campaign_id: null,   email: "a@b.com"}
+        - {player_id: 3, country_code: DE,   acquisition_channel: organic,     acquisition_campaign_id: null,   email: "c@d.com"}
+
+  - name: test_stg_levelup__play_sessions_dedupes_on_session_id
+    description: >
+      The raw feed can carry duplicate session_id rows (e.g. a retried
+      upsert); only one survives per session_id (earliest by
+      source_synced_at, then session_start_at), so downstream grain is truly
+      one row per session.
+    model: stg_levelup__play_sessions
+    given:
+      - input: source('level_up_labs', 'play_sessions')
+        rows:
+          - {session_id: 1, player_id: 1, title_id: 5, platform: steam, session_start_at: "2026-01-01 09:00:00", session_end_at: "2026-01-01 09:10:00", duration_seconds: 600, device_model: "PC (Windows)",       app_version: "1.0.0", country_code: us, levels_completed: 1, crashed_flag: false, network_type: wifi,     _fivetran_synced: "2026-01-01 00:00:00"}
+          - {session_id: 1, player_id: 1, title_id: 5, platform: steam, session_start_at: "2026-01-01 09:00:00", session_end_at: "2026-01-01 09:10:00", duration_seconds: 600, device_model: "DUPLICATE_SHOULD_DROP", app_version: "1.0.0", country_code: us, levels_completed: 1, crashed_flag: false, network_type: wifi,     _fivetran_synced: "2026-01-02 00:00:00"}
+          - {session_id: 2, player_id: 2, title_id: 8, platform: ios,   session_start_at: "2026-06-03 09:00:00", session_end_at: "2026-06-03 09:05:00", duration_seconds: 300, device_model: "Pixel 7",              app_version: "2.0.0", country_code: de, levels_completed: 2, crashed_flag: false, network_type: cellular, _fivetran_synced: "2026-01-01 00:00:00"}
+    expect:
+      rows:
+        - {session_id: 1, device_model: "PC (Windows)"}
+        - {session_id: 2, device_model: "Pixel 7"}

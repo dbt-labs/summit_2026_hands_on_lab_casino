@@ -1,0 +1,35 @@
+version: 2
+
+models:
+  - name: int_transactions
+    description: >
+      One row per transaction. Sign-normalizes refunds/chargebacks so
+      net_amount_usd sums to true net revenue, and classifies each
+      transaction into a revenue_stream_group (live_service, catalog,
+      reversal). Single source of truth for revenue sign/stream logic.
+
+  - name: int_play_sessions_enriched
+    description: >
+      One row per session. Joins to players (for registration date) and
+      releases (for the app_version in effect at session time), and derives
+      retention/cohort fields (registration_cohort_month,
+      week_offset_from_registration) reused by fct_play_sessions and the
+      player-experience marts.
+
+  - name: int_player_spend
+    description: >
+      One row per player. Rolls up int_transactions into lifetime net
+      revenue by stream and derives payer_segment (whale/dolphin/minnow/
+      non_payer) from live-service (IAP + season pass) spend only --
+      premium/DLC purchases never make a player a "payer."
+
+  - name: int_player_activity
+    description: >
+      One row per player. Rolls up int_play_sessions_enriched into lifetime
+      session/playtime totals and each player's favorite_title_id and
+      primary_platform (by session count).
+
+  - name: int_title_activity
+    description: >
+      One row per title. Rolls up session and review activity relative to
+      the analysis_as_of_date var -- feeds dim_titles' lifecycle_stage.
