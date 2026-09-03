@@ -3,7 +3,7 @@ version: 2
 sources:
   - name: level_up_labs
     database: summit_hol_2026
-    schema: casino_summit_test
+    schema: summit_level_up
     description: >
       Synthetic Level Up Labs video game studio data from the
       summit_2026_connector_sdk Fivetran connector -- 11 joinable tables
